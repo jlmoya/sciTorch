@@ -1,0 +1,17 @@
+# Large bundled dependency (PyTorch C++ libs) — never commit
+**/thirdparty/libtorch/
+# Scilab toolbox build artifacts
+**/*.bin
+**/*.dylib
+**/*.so
+**/*.o
+**/*.a
+**/loader.sce
+**/unloader.sce
+**/cleaner.sce
+**/cleaner_gateway.sce
+**/loader_gateway.sce
+**/macros/lib
+**/macros/names
+**/jar/
+.DS_Store

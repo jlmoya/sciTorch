@@ -1,0 +1,117 @@
+//=============================================================================
+// IPCV - Scilab Image Processing and Computer Vision toolbox
+// Copyright (C) 2017  Tan Chin Luh
+//=============================================================================
+//
+function sciTorchlib = startModule()
+
+    TOOLBOX_NAME  = "sciTorch"
+    TOOLBOX_TITLE = "sciTorch - Machine and Deep Learning Module for Scilab 6";
+
+    mprintf("Start " + TOOLBOX_NAME + " 4.1 for Scilab 6.0\n");
+    mprintf(TOOLBOX_TITLE + "\n");
+    mprintf("2019 - Bytecode Malaysia\n");
+    //mprintf("Find more information at http://scilabipcv.tritytech.com \n");
+
+    if isdef("sciTorchlib") then
+        warning(TOOLBOX_NAME + " library is already loaded");
+        return;
+    end
+
+    etc_tlbx  = get_absolute_file_path("sciTorch.start");
+    etc_tlbx  = getshortpathname(etc_tlbx);
+    root_tlbx = strncpy( etc_tlbx, length(etc_tlbx)-length("\etc\") );
+
+    //Load  functions library
+    // =============================================================================
+    mprintf("\tLoad macros\n");
+    pathmacros = pathconvert( root_tlbx ) + "macros" + filesep();
+    sciTorchlib = lib(pathmacros);
+
+    verboseMode = ilib_verbose();
+    ilib_verbose(0);
+
+    // load dependencies
+    // =============================================================================
+    // load dependencies on OpenCV 2.4.3
+    mprintf("\tLoad dependencies\n");
+    //OPENCV_LIBS = ['opencv_world']; // This is for temp opencv 
+    TORCH_LIBS = ['c10',...
+	'caffe2_detectron_ops',...
+	'caffe2_module_test_dynamic',...
+	'caffe2',...
+	'foxi_dummy',...
+	'foxi',...
+	'onnxifi_dummy',...
+	'onnxifi',...
+	'torch'];
+//	'gomp-8bba0e50',...
+
+    //OPENCV_VERSION = "4.1.0"
+    bDepsLoaded = %t;
+    bNonfLoaded = %t;
+
+    if getos() == 'Windows' then // Windows
+        //OPENCV_LIBS = OPENCV_LIBS + "410" ; // This is for temp opencv 
+        //exec(etc_tlbx+'sciTorch_windows_opencv.sci'); // This is for temp opencv 
+        //sciTorch_windows_opencv(root_tlbx,OPENCV_LIBS); // This is for temp opencv 
+        exec(etc_tlbx+'sciTorch_windows_torch.sci');
+        sciTorch_windows_torch(root_tlbx,TORCH_LIBS);
+
+    elseif getos() == 'Darwin' // Mac        
+        exec(etc_tlbx+'sciTorch_MacOS.sci');
+        sciTorch_MacOS(root_tlbx,TORCH_LIBS);
+
+    else // Linux
+        //exec(etc_tlbx+'sciTorch_linux.sci');
+        //sciTorch_linux(root_tlbx,OPENCV_LIBS);
+        exec(etc_tlbx+'sciTorch_linux_torch.sci');
+        sciTorch_linux_torch(root_tlbx,TORCH_LIBS);        
+    end
+
+
+    // load gateways
+    // =============================================================================
+    mprintf("\tLoad gateways\n");
+    try
+        exec(pathconvert(root_tlbx + "/sci_gateway/loader_gateway.sce", %f));
+    catch
+        err = lasterror();		
+        return;
+    end
+
+    ilib_verbose(verboseMode);
+
+    // Load and add help chapter
+    // =============================================================================
+    if or(getscilabmode() == ["NW";"STD"]) then
+        mprintf("\tLoad help\n");
+        path_addchapter = pathconvert(root_tlbx+"/jar");
+        if isdir(path_addchapter) then
+            add_help_chapter(TOOLBOX_TITLE, path_addchapter, %F);
+        end
+    end
+
+    // Load demos
+    // =============================================================================
+    //if or(getscilabmode() == ["NW";"STD"]) then
+    //    mprintf("\tLoad demos\n");
+    //    pathdemos = pathconvert(root_tlbx+"/demos/ipcv.dem.gateway.sce",%F,%T);
+    //    add_demo("IPCV",pathdemos);
+    //end
+
+    //ipcv_init(root_tlbx);
+
+endfunction
+// =============================================================================
+
+if isdef("sciTorchlib") then
+    warning(" sciTorch library is already loaded");
+    return;
+else
+    sciTorchlib = startModule();
+    clear startModule; // remove startModule on stack
+
+end
+// =============================================================================
+

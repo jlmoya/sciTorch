@@ -1,0 +1,104 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<!--
+ *
+ * This help file was generated from torch_forward.sci using help_from_sci().
+ *
+ -->
+
+<refentry version="5.0-subset Scilab" xml:id="torch_forward" xml:lang="en"
+          xmlns="http://docbook.org/ns/docbook"
+          xmlns:xlink="http://www.w3.org/1999/xlink"
+          xmlns:svg="http://www.w3.org/2000/svg"
+          xmlns:ns3="http://www.w3.org/1999/xhtml"
+          xmlns:mml="http://www.w3.org/1998/Math/MathML"
+          xmlns:scilab="http://www.scilab.org"
+          xmlns:db="http://docbook.org/ns/docbook">
+
+  <refnamediv>
+    <refname>torch_forward</refname>
+    <refpurpose>Forward Pass</refpurpose>
+  </refnamediv>
+
+
+<refsynopsisdiv>
+   <title>Syntax</title>
+   <synopsis>
+   out = torch_forward(model,in)
+   
+   </synopsis>
+</refsynopsisdiv>
+
+<refsection>
+   <title>Parameters</title>
+   <variablelist>
+        <varlistentry>
+            <term>model :</term>
+            <listitem><para> TorchScript model</para></listitem>
+        </varlistentry>
+        <varlistentry>
+            <term>in :</term>
+            <listitem><para> Input image</para></listitem>
+        </varlistentry>
+        <varlistentry>
+            <term>out :</term>
+            <listitem><para> Output of the forward pass</para></listitem>
+        </varlistentry>
+   </variablelist>
+</refsection>
+
+<refsection>
+   <title>Description</title>
+   <para>
+This function is used to forward pass an image throught a loaded network.
+   </para>
+   <para>
+</para>
+</refsection>
+
+<refsection>
+   <title>Examples</title>
+   <programlisting role="example"><![CDATA[
+S = imread(fullpath(torch_path() + "/demos/images/" + "cat.jpg"));
+model = torch_load(fullpath(torch_path() + "/demos/models/" + "sciGooglenet.pt"));
+S2 = im2double(S);
+
+m2 = torch_broadcast([0.485, 0.456, 0.406],S);
+s2 = torch_broadcast([0.229, 0.224, 0.225],S);
+
+// Normalized
+S3 = (S2 - m2)./s2;
+
+out = torch_forward(model,S3);
+
+// Top-1
+[V,I] = max(out);
+str = mgetl(fullpath(torch_path() + "/demos/models/" + "classification_classes_ILSVRC2012.txt"));
+disp(str(I));
+
+// Top-5
+[maxV,maxI] = gsort(out);
+disp(str(maxI(1:5)));
+
+   ]]></programlisting>
+</refsection>
+
+<refsection role="see also">
+   <title>See also</title>
+   <simplelist type="inline">
+   <member><link linkend="torch_load">torch_load</link></member>
+   <member><link linkend="torch_unload">torch_unload</link></member>
+   <member><link linkend="torch_unloadall">torch_unloadall</link></member>
+   <member><link linkend="torch_list">torch_list</link></member>
+   <member><link linkend="torch_props">torch_props</link></member>
+   <member><link linkend="torch_forward">torch_forward</link></member>
+   </simplelist>
+</refsection>
+
+<refsection>
+   <title>Authors</title>
+   <simplelist type="vert">
+   <member>ByteCode - Tan Chin Luh</member>
+   </simplelist>
+</refsection>
+</refentry>

@@ -1,0 +1,30 @@
+
+Toolbox: sciTorch
+
+Title: A Module for Machine and Deep Learning via Interfacing with libTorch for Scilab
+
+Summary: Abstract layer for Deep Learning 
+
+Version: 0.1
+
+Author: Tan Chin Luh 
+
+Maintainer: Tan Chin Luh <tanchinluh@gmail.com>
+
+Category: Machine Learning
+
+Entity: Bytecode Malaysia (formerly Trity Technologies)
+
+WebSite: https://www.bytecode-asia.com/
+
+URL: https://www.bytecode-asia.com/
+
+License: GPL v.3
+
+ScilabVersion: >= 6.0
+
+Depends: 
+
+Date: 2019-09-09 12:00:007
+
+Description: sciTorch is build to as the high-level programming interface for libTorch

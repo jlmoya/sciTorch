@@ -1,0 +1,76 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<!--
+ *
+ * This help file was generated from torch_unloadall.sci using help_from_sci().
+ *
+ -->
+
+<refentry version="5.0-subset Scilab" xml:id="torch_unloadall" xml:lang="en"
+          xmlns="http://docbook.org/ns/docbook"
+          xmlns:xlink="http://www.w3.org/1999/xlink"
+          xmlns:svg="http://www.w3.org/2000/svg"
+          xmlns:ns3="http://www.w3.org/1999/xhtml"
+          xmlns:mml="http://www.w3.org/1998/Math/MathML"
+          xmlns:scilab="http://www.scilab.org"
+          xmlns:db="http://docbook.org/ns/docbook">
+
+  <refnamediv>
+    <refname>torch_unloadall</refname>
+    <refpurpose>Unload All Model from Scilab Workspace</refpurpose>
+  </refnamediv>
+
+
+<refsynopsisdiv>
+   <title>Syntax</title>
+   <synopsis>
+   torch_unloadall()
+   
+   </synopsis>
+</refsynopsisdiv>
+
+<refsection>
+   <title>Parameters</title>
+   <variablelist>
+   </variablelist>
+</refsection>
+
+<refsection>
+   <title>Description</title>
+   <para>
+This function used to unload all loaded models in Scilab.
+   </para>
+   <para>
+</para>
+</refsection>
+
+<refsection>
+   <title>Examples</title>
+   <programlisting role="example"><![CDATA[
+model = torch_load(fullpath(torch_path() + "/demos/models/" + "sciGooglenet.pt"));
+torch_list()
+torch_unloadall;
+torch_list()
+
+   ]]></programlisting>
+</refsection>
+
+<refsection role="see also">
+   <title>See also</title>
+   <simplelist type="inline">
+   <member><link linkend="torch_load">torch_load</link></member>
+   <member><link linkend="torch_unload">torch_unload</link></member>
+   <member><link linkend="torch_unloadall">torch_unloadall</link></member>
+   <member><link linkend="torch_list">torch_list</link></member>
+   <member><link linkend="torch_props">torch_props</link></member>
+   <member><link linkend="torch_forward">torch_forward</link></member>
+   </simplelist>
+</refsection>
+
+<refsection>
+   <title>Authors</title>
+   <simplelist type="vert">
+   <member>ByteCode - Tan Chin Luh</member>
+   </simplelist>
+</refsection>
+</refentry>
