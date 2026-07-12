@@ -1,5 +1,9 @@
-# Large bundled dependency (PyTorch C++ libs) — never commit
+# Large bundled dependency (PyTorch C++ libs, OpenCV+ffmpeg runtime closure)
+# — never commit; fetched by fetch-thirdparty.sh instead. The opencv closure
+# is also covered by the **/*.dylib rule below, but pin it explicitly too so
+# a future non-dylib addition under it (docs, headers) doesn't slip through.
 **/thirdparty/libtorch/
+**/thirdparty/opencv/
 # Scilab toolbox build artifacts
 **/*.bin
 **/*.dylib
