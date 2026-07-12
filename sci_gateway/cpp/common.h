@@ -43,12 +43,11 @@
 #include <torch/torch.h>
 #include <torch/script.h>
 #include <opencv2/opencv.hpp>
-//#include "C:/Program Files/scilab-6.0.2/contrib/IPCV/sci_gateway/cpp/gw_ipcv.h"
-# ifdef _WIN64
-  # include <gw_ipcv.h>
-# else
-  # include <libgw_ipcv.h>
-#endif
+// GetDouble/GetImage/GetString/etc. below used to come from IPCV's own gateway
+// header (gw_ipcv.h / libgw_ipcv.h), loaded into the process via a link() of
+// IPCV's gateway .dylib. That cross-toolbox runtime dependency is gone (see
+// sci_gateway/cpp/common.cpp); the declarations right below are all sciTorch
+// needs, and common.cpp now implements them directly.
 
 #define MAX_NET_NUM 3
 

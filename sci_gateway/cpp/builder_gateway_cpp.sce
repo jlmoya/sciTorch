@@ -48,7 +48,21 @@ function builder_gateway_cpp()
         gw_cpp_files = [gw_cpp_files; "common.h"];           // Add in common header
         gw_cpp_files(gw_cpp_files == 'dllsciTorch.cpp') = []; // windows-only symbol loader
 
-        [m, ipcv_path] = libraryinfo('ipcvlib');   // IPCV macro path
+        // IPCV headers/import-lib are still needed to REBUILD this gateway from
+        // source (opencv2/opencv.hpp + the IPCV-vendored OpenCV .dylib to link
+        // against) -- the runtime artifact itself is self-contained (see the rpath
+        // comment below), but a source rebuild still needs IPCV present. Prefer
+        // asking the running session (portable across machines); if IPCV isn't
+        // loadable in THIS session (e.g. its own bundled OpenCV/ffmpeg has the same
+        // class of broken-absolute-path fragility we're fixing here, or it's just
+        // not loaded), fall back to this machine's known install so the build isn't
+        // blocked on a completely unrelated toolbox's own defects.
+        try
+            [m, ipcv_path] = libraryinfo('ipcvlib');   // IPCV macro path
+        catch
+            ipcv_path = "/Applications/scilab-2026.1.0.app/Contents/share/scilab/contrib/IPCV/4.5.0.2/macros";
+            warning("builder_gateway_cpp: ipcvlib not loadable in this session; falling back to " + ipcv_path);
+        end
         torch_tp_path  = fullpath(gw_cpp_path + "/../../thirdparty");
         torch_arch     = "arm64";
 
@@ -72,17 +86,31 @@ function builder_gateway_cpp()
         inter_cflags = inter_cflags + " -Wno-error=invalid-specialization -Wno-invalid-specialization";
 
         // Link libTorch + OpenCV; rpath to libtorch is @loader_path-relative so it
-        // resolves both in the build tree and after deploy to contrib.
+        // resolves both in the build tree and after deploy to contrib. OpenCV's rpath
+        // is ALSO @loader_path-relative, into sciTorch's own vendored copy
+        // (thirdparty/opencv/Darwin/arm64/lib) rather than IPCV's install -- sciTorch
+        // must not depend on another toolbox's app bundle still being on disk at
+        // runtime. OPENCV_INCLUDE/-L still resolve against IPCV's headers/import lib
+        // at BUILD time only (rebuilding from source still needs IPCV installed).
         inter_ldflags = " -std=c++17 -stdlib=libc++";
         inter_ldflags = inter_ldflags + " -L" + TORCH_LIB + " -ltorch -ltorch_cpu -lc10";
         inter_ldflags = inter_ldflags + " -Wl,-rpath,@loader_path/../../thirdparty/libtorch/Darwin/" + torch_arch + "/lib";
-        inter_ldflags = inter_ldflags + " -L" + OPENCV_LIB + " -lopencv_world -Wl,-rpath," + OPENCV_LIB;
+        inter_ldflags = inter_ldflags + " -L" + OPENCV_LIB + " -lopencv_world -Wl,-rpath,@loader_path/../../thirdparty/opencv/Darwin/" + torch_arch + "/lib";
 
         // Force the C compiler into C++ mode so configure's mandatory C-compiler test
         // accepts -std=c++17 (the gateway has no .c files, only .cpp).
         inter_cc = "clang++ -x c++";
 
-        all_libs = fullpath(ipcv_path + "/../sci_gateway/cpp/libgw_ipcv");
+        // No extra libs to pre-link()/preload: sciTorch's gateway does NOT call into
+        // IPCV's own gateway (libgw_ipcv) -- confirmed via nm -u showing zero undefined
+        // symbols referencing it in the built dylib. A stray
+        // all_libs = .../libgw_ipcv here (copy-pasted from the IPCV skeleton this
+        // toolbox was derived from) used to make ilib_gen_loader emit a link() of
+        // libgw_ipcv at the top of loader.sce -- which is ABI-coupled to whatever
+        // Scilab app bundle IPCV happens to be installed in, fails on any other build,
+        // and silently aborts the whole gateway load before addinter() ever runs. See
+        // sci_gateway/cpp/loader.sce.
+        all_libs = [];
     elseif getos() == "Linux" then  // Linux
 
         gw_cpp_files = [gw_cpp_files; "common.h"];
@@ -105,8 +133,9 @@ function builder_gateway_cpp()
         inter_ldflags = " -std=c++11";
         opencv_libs = [];
         
-        // Include IPCV library
-        all_libs = fullpath(ipcv_path + "/../sci_gateway/cpp/libgw_ipcv");
+        // No extra libs to pre-link()/preload -- see the Darwin branch above for why
+        // an all_libs = .../libgw_ipcv here would resurrect the loader.sce bug.
+        all_libs = [];
 
     else // Windows
         // Include paths, including torch, opencv and IPCV path
@@ -122,8 +151,9 @@ function builder_gateway_cpp()
         inter_cflags = ilib_include_flag([OPENCV_INCLUDE TORCH_INCLUDE, TORCH2_INCLUDE,IPCV_INCLUDE]); 
         inter_ldflags = " -std=c++11";        
 
-        // Include IPCV library
-        all_libs = fullpath(ipcv_path + "/../sci_gateway/cpp/gw_ipcv");
+        // No extra libs to pre-link()/preload -- see the Darwin branch above for why
+        // an all_libs = .../gw_ipcv here would resurrect the loader.sce bug.
+        all_libs = [];
 
     end
 

@@ -76,7 +76,9 @@ function sciTorchlib = startModule()
     try
         exec(pathconvert(root_tlbx + "/sci_gateway/loader_gateway.sce", %f));
     catch
-        err = lasterror();		
+        err = lasterror();
+        warning(TOOLBOX_NAME + ": native gateway failed to load, native functions" ..
+            + " will be unavailable (macros only). Cause: " + err);
         return;
     end
 
