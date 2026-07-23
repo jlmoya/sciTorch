@@ -70,9 +70,23 @@ function builder_gateway_cpp()
         TORCH_INCLUDE  = fullpath(TORCH_ROOT + "/include");
         TORCH2_INCLUDE = fullpath(TORCH_ROOT + "/include/torch/csrc/api/include");
         TORCH_LIB      = fullpath(TORCH_ROOT + "/lib");
-        OPENCV_ROOT    = fullpath(ipcv_path + "/../thirdparty/Darwin/" + torch_arch);
-        OPENCV_INCLUDE = fullpath(OPENCV_ROOT + "/include/opencv4");
-        OPENCV_LIB     = fullpath(OPENCV_ROOT + "/lib");
+        // macOS: link the SYSTEM OpenCV (Homebrew) -- the SAME copy scicv uses -- so
+        // both toolboxes share ONE OpenCV in a single process. sciTorch needs only
+        // Mat<->tensor conversion (cv::Mat / cv::imread; 7 symbols, core + imgcodecs),
+        // never highgui or videoio. The old vendored libopencv_world 4.5.0 was a
+        // monolithic all-modules build: it pulled highgui's CVWindow/CVView/CVSlider and
+        // videoio's CaptureDelegate ObjC classes into the process, where they collided
+        // with scicv's OpenCV 5.0.0 and risked dispatching scicv's imshow/VideoCapture
+        // (used 441x) to sciTorch's stale 4.5.0 classes -- the "mysterious crashes" the
+        // ObjC runtime warns about. Resolved through pkg-config (module opencv5), so an
+        // OpenCV upgrade is picked up here with no edit. PKG_CONFIG_PATH is pinned to the
+        // Homebrew keg because opencv5.pc lives under opt/opencv, not the default path.
+        OPENCV_PCENV   = "PKG_CONFIG_PATH=/opt/homebrew/opt/opencv/lib/pkgconfig ";
+        OPENCV_CFLAGS  = stripblanks(unix_g(OPENCV_PCENV + "pkg-config --cflags opencv5"));
+        OPENCV_LIBDIR  = stripblanks(unix_g(OPENCV_PCENV + "pkg-config --variable=libdir opencv5"));
+        if OPENCV_CFLAGS == "" | OPENCV_LIBDIR == "" then
+            error("builder_gateway_cpp: pkg-config could not resolve opencv5 -- is Homebrew opencv installed? (brew install opencv)");
+        end
         IPCV_INCLUDE   = fullpath(ipcv_path + "/../sci_gateway/cpp");
 
         // libTorch 2.5.1 requires C++17. These flags go to both CFLAGS and CXXFLAGS,
@@ -80,22 +94,23 @@ function builder_gateway_cpp()
         inter_cflags = " -std=c++17 -stdlib=libc++";
         inter_cflags = inter_cflags + " -I" + TORCH_INCLUDE;
         inter_cflags = inter_cflags + " -I" + TORCH2_INCLUDE;
-        inter_cflags = inter_cflags + " -I" + OPENCV_INCLUDE;
+        inter_cflags = inter_cflags + " " + OPENCV_CFLAGS;
         inter_cflags = inter_cflags + " -I" + IPCV_INCLUDE;
         // libTorch+clang21 clash: ATen specializes std::is_arithmetic -> downgrade to warning
         inter_cflags = inter_cflags + " -Wno-error=invalid-specialization -Wno-invalid-specialization";
 
-        // Link libTorch + OpenCV; rpath to libtorch is @loader_path-relative so it
-        // resolves both in the build tree and after deploy to contrib. OpenCV's rpath
-        // is ALSO @loader_path-relative, into sciTorch's own vendored copy
-        // (thirdparty/opencv/Darwin/arm64/lib) rather than IPCV's install -- sciTorch
-        // must not depend on another toolbox's app bundle still being on disk at
-        // runtime. OPENCV_INCLUDE/-L still resolve against IPCV's headers/import lib
-        // at BUILD time only (rebuilding from source still needs IPCV installed).
+        // Link libTorch + OpenCV. libTorch stays vendored: its rpath is @loader_path-
+        // relative so it resolves in the build tree and after deploy to contrib.
+        // OpenCV now comes from Homebrew and needs NO rpath -- its dylibs carry absolute
+        // install_names (/opt/homebrew/opt/opencv/lib/libopencv_*.500.dylib), the same
+        // way scicv links them, so both toolboxes resolve to the one physical copy.
+        // Only the modules sciTorch actually uses are linked: core (cv::Mat, fastFree),
+        // imgproc, imgcodecs (cv::imread) -- deliberately NOT highgui/videoio, whose
+        // ObjC classes were the entire cause of the collision.
         inter_ldflags = " -std=c++17 -stdlib=libc++";
         inter_ldflags = inter_ldflags + " -L" + TORCH_LIB + " -ltorch -ltorch_cpu -lc10";
         inter_ldflags = inter_ldflags + " -Wl,-rpath,@loader_path/../../thirdparty/libtorch/Darwin/" + torch_arch + "/lib";
-        inter_ldflags = inter_ldflags + " -L" + OPENCV_LIB + " -lopencv_world -Wl,-rpath,@loader_path/../../thirdparty/opencv/Darwin/" + torch_arch + "/lib";
+        inter_ldflags = inter_ldflags + " -L" + OPENCV_LIBDIR + " -lopencv_core -lopencv_imgproc -lopencv_imgcodecs";
 
         // Force the C compiler into C++ mode so configure's mandatory C-compiler test
         // accepts -std=c++17 (the gateway has no .c files, only .cpp).
@@ -166,6 +181,22 @@ function builder_gateway_cpp()
     inter_cflags, ..
     "", ..
     inter_cc);
+
+    // macOS: re-sign the freshly linked gateway with a fresh ad-hoc signature.
+    // The linker's own ad-hoc signature ("linker-signed") on this dylib passes
+    // `codesign --verify` yet is REJECTED by AMFI at load time with a CODESIGNING
+    // "Invalid Page" fault (EXC_BAD_ACCESS / SIGKILL) -- which takes down the whole
+    // Scilab process the instant the gateway is link()'d. It surfaced when this gateway
+    // began pulling Homebrew OpenCV's larger dependency chain (openblas + gcc fortran)
+    // alongside libTorch; the fresh signature below loads cleanly. This is a no-op on a
+    // gateway that was already fine, so it is safe to run unconditionally on Darwin.
+    if getos() == 'Darwin' then
+        gw_dylib = fullpath(gw_cpp_path + "/libgw_sciTorch" + getdynlibext());  // getdynlibext() includes the dot
+        if isfile(gw_dylib) then
+            unix_g("codesign --remove-signature " + """" + gw_dylib + """" + " 2>/dev/null; " + ..
+                   "codesign --force --sign - --timestamp=none " + """" + gw_dylib + """");
+        end
+    end
 
 endfunction
 // ====================================================================
